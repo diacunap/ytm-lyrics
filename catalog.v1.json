@@ -1,0 +1,42 @@
+{
+  "$schema": "https://apps.bridgething.com/schemas/catalog/v1.json",
+  "schema": "catalog.v1",
+  "updated_at": "2026-09-19T07:10:49.720Z",
+  "repo": {
+    "name": "ytm-lyrics",
+    "description": "Webapps by ytm-lyrics.",
+    "homepage": "https://github.com/diacunap/ytm-lyrics",
+    "icon": null
+  },
+  "apps": [
+    {
+      "id": "01a0b7ff-16b7-726e-9555-0719b9d96665",
+      "name": "ytm-lyrics",
+      "description": "Minimal player with synced lyrics from LRCLIB for whatever your computer is playing",
+      "author": "Daniel Acuna",
+      "icon": null,
+      "homepage": "https://github.com/diacunap/ytm-lyrics",
+      "source": "https://github.com/diacunap/ytm-lyrics",
+      "versions": [
+        {
+          "version": "0.9.3",
+          "released_at": "2026-09-19T07:10:49.716Z",
+          "download": {
+            "url": "https://diacunap.github.io/ytm-lyrics/r/01a0b7ff-16b7-726e-9555-0719b9d96665/0.9.3.zip",
+            "size": 1261708,
+            "sha256": "9eeaed2756be685f6a4ab061a1bf76dfbe1fd3fe885bea815714c911f79939ab"
+          },
+          "settings": {
+            "url": "https://diacunap.github.io/ytm-lyrics/s/01a0b7ff-16b7-726e-9555-0719b9d96665/0.9.3.html",
+            "size": 26923,
+            "sha256": "b44e7ee1b16e9aa4150bf231bd5c85d34982fe5ccb3dc6006c174cbbedd4e341"
+          },
+          "permissions": [],
+          "min_libbridgething_version": "0.12.1",
+          "changelog": "the track intro keys on title+artist and waits 500 ms of stable metadata, so a seek no longer replays it"
+        }
+      ]
+    }
+  ],
+  "recommended_sources": []
+}
