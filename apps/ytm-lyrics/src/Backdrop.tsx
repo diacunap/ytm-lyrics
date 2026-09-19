@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react';
 
 import type { Style } from './lib/deezer';
 import { gradientCss, rgbCss, themeKey, type Theme } from './lib/palette';
+import { PACK_SHAPES, SHAPES, type ShapeName } from './lib/shapes';
 
 interface Props {
   theme: Theme | null;
@@ -49,18 +50,16 @@ function rng(seed: number): () => number {
   };
 }
 
-type Kind = 'circle' | 'square' | 'triangle';
-
-// what each genre family puts on the stage
-const PACKS: Record<Style, { kinds: Kind[]; count: number; speed: number; sizeMin: number; sizeMax: number; alpha: number }> = {
-  round: { kinds: ['circle', 'square', 'triangle'], count: 7, speed: 1, sizeMin: 40, sizeMax: 160, alpha: 1 },
-  sharp: { kinds: ['triangle', 'square', 'triangle'], count: 8, speed: 0.6, sizeMin: 60, sizeMax: 200, alpha: 1.15 },
-  grid: { kinds: ['square'], count: 12, speed: 0.8, sizeMin: 28, sizeMax: 64, alpha: 1.2 },
-  calm: { kinds: ['circle'], count: 3, speed: 1.8, sizeMin: 120, sizeMax: 260, alpha: 0.6 },
+// what each genre family puts on the stage: which silhouettes, how many, how fast, how big
+const PACKS: Record<Style, { count: number; speed: number; sizeMin: number; sizeMax: number; alpha: number }> = {
+  round: { count: 7, speed: 1, sizeMin: 60, sizeMax: 180, alpha: 1 },
+  sharp: { count: 8, speed: 0.6, sizeMin: 70, sizeMax: 220, alpha: 1.15 },
+  grid: { count: 10, speed: 0.8, sizeMin: 36, sizeMax: 90, alpha: 1.2 },
+  calm: { count: 4, speed: 1.8, sizeMin: 140, sizeMax: 280, alpha: 0.6 },
 };
 
 interface Shape {
-  kind: Kind;
+  kind: ShapeName;
   size: number;
   top: number;
   color: number;
@@ -73,9 +72,9 @@ interface Shape {
 function layout(seed: string, style: Style): Shape[] {
   const next = rng(hash(seed));
   const pack = PACKS[style];
-  const kinds = pack.kinds;
+  const kinds = PACK_SHAPES[style];
   return Array.from({ length: pack.count }, (_, i) => ({
-    kind: kinds[i % kinds.length],
+    kind: kinds[Math.floor(next() * kinds.length)] ?? kinds[i % kinds.length],
     size: pack.sizeMin + Math.round(next() * (pack.sizeMax - pack.sizeMin)),
     top: Math.round(next() * 88),
     color: 1 + Math.floor(next() * 4),
@@ -123,19 +122,21 @@ export const Backdrop = memo(function Backdrop({ theme, playing, seed, quality =
         className={'absolute inset-0' + (beatMs && quality === 'full' ? ' shapes-beat' : '')}
         style={{ ['--beat' as string]: beatMs ? `${beatMs}ms` : '0ms' }}>
         {shapes.map((s, i) => (
-          <div
+          <svg
             key={i}
-            className={`shape shape-${s.kind}${s.reverse ? ' shape-reverse' : ''}`}
+            className={`shape${s.reverse ? ' shape-reverse' : ''}`}
+            viewBox="0 0 100 100"
+            aria-hidden
             style={{
               width: s.size,
               height: s.size,
               top: `${s.top}%`,
-              background: rgbCss(colors[s.color % colors.length], Math.min(0.4, alpha)),
               ['--dur' as string]: `${Math.round(s.durationS * speed)}s`,
               ['--delay' as string]: `${s.delayS}s`,
               ['--spin' as string]: `${s.spin}deg`,
-            }}
-          />
+            }}>
+            <path d={SHAPES[s.kind]} fill={rgbCss(colors[s.color % colors.length], Math.min(0.4, alpha))} />
+          </svg>
         ))}
       </div>
       <div className={'absolute inset-0 ' + (t.light ? 'bg-off-white/45' : 'bg-screen/55')} />

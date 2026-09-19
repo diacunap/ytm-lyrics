@@ -1,5 +1,9 @@
 # ytm-lyrics
 
+## 1.2.0
+
+word fill moves to a composited clip-path reveal (no paint, no per-word layers), twenty-odd svg silhouettes in genre packs, a second voice per genre for the chorus, romanization cached
+
 ## 1.1.0
 
 a typeface per genre family (Anton, Space Grotesk, DM Serif Display, Syne), plain ink on the sung word, the position loop at 20 Hz with ring and clock at 5 Hz

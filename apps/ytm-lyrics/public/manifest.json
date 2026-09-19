@@ -1,7 +1,7 @@
 {
   "id": "01a0b7ff-16b7-726e-9555-0719b9d96665",
   "name": "ytm-lyrics",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Minimal player with synced lyrics from LRCLIB for whatever your computer is playing",
   "settings": "settings.html",
   "config": [],

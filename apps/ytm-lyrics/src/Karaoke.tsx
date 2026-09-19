@@ -30,7 +30,7 @@ interface Props {
 // the current line gets the whole stage: 800x480 minus the top strip and the next-line footer
 const STAGE_W = 800 - 2 * 40;
 const STAGE_H = 480 - 64 - 110;
-const LINE_CLASS = 'stage-type text-balance';
+const LINE_CLASS = 'stage-type';
 // the eye wants a word to start filling a beat before the ear hears it
 const LEAD_MS = 150;
 // a gap this long before the next line gets the intermission dots instead of a stale line
@@ -65,28 +65,35 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
     );
   }
   useEffect(() => () => measurer.current?.dispose(), []);
-  // the probe is not inside the stage, so it gets the stage's voice by hand from the css variables
+  // the probe is not inside the stage, so each voice is read off the stage's css variables by hand
   const stageRef = useRef<HTMLDivElement | null>(null);
+  const voices = useRef<{ verse: string; chorus: string }>({ verse: '', chorus: '' });
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const cs = getComputedStyle(el);
     const v = (name: string) => cs.getPropertyValue(name).trim();
-    measurer.current?.setFont(
-      `font-family:${v('--stage-font')},"Outfit",system-ui,sans-serif;font-weight:${v('--stage-weight')};letter-spacing:${v('--stage-tracking')};line-height:${v('--stage-leading')};text-transform:${v('--stage-transform')};`,
-    );
+    const decl = (p: string) =>
+      `font-family:${v(`--${p}-font`)},"Outfit",system-ui,sans-serif;font-weight:${v(`--${p}-weight`)};letter-spacing:${v(`--${p}-tracking`)};line-height:${v(`--${p}-leading`)};text-transform:${v(`--${p}-transform`)};`;
+    voices.current = { verse: decl('stage'), chorus: decl('chorus') };
   }, [style]);
+  const kinds = useMemo(() => lineKinds(lines), [lines]);
+  const voiceFor = (i: number) => (kinds[i] === 'chorus' ? voices.current.chorus : voices.current.verse);
   // the two lines ahead get measured while nothing is happening, so their turn costs no layout
   useEffect(() => {
-    const ahead = [lines[current + 1]?.text, lines[current + 2]?.text].filter((t): t is string => !!t);
+    const ahead = [current + 1, current + 2]
+      .filter(i => lines[i]?.text)
+      .map(i => ({ text: lines[i].text, font: voiceFor(i) }));
     measurer.current?.prepare(ahead);
-  }, [lines, current]);
-  const kinds = useMemo(() => lineKinds(lines), [lines]);
+    // voices are refs read at call time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines, current, style]);
   const kind = current >= 0 ? kinds[current] : 'verse';
   // the entrance follows the line: a hook slams in from the center, a chorus flashes, a verse slides
   const entrance = kind === 'hook' ? 'karaoke-in-zoom' : kind === 'chorus' ? 'karaoke-in-flash' : 'karaoke-in';
   const text = current >= 0 ? (lines[current]?.text ?? '') : '';
-  const fitPx = text ? (measurer.current?.get(text) ?? measurer.current?.measureNow(text) ?? 96) : 96;
+  const fitReq = { text, font: voiceFor(current) };
+  const fitPx = text ? (measurer.current?.get(fitReq) ?? measurer.current?.measureNow(fitReq) ?? 96) : 96;
   // once the big line is romaji, the original japanese moves to the small line under it
   const romaji = useMemo(() => (dict && HAS_JAPANESE.test(text) ? text : null), [text, dict]);
   const nextRomaji = useMemo(() => {
@@ -125,7 +132,7 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
         style={{ ['--play' as string]: play, ['--accent' as string]: theme ? accentCss(theme, kind === 'chorus' ? 1 : 0) : 'var(--text)' }}>
         <div key={current} className={entrance + ' w-full'}>
           {empty ? null : (
-            <div key={epoch} className={LINE_CLASS} style={{ fontSize: fitPx }}>
+            <div key={epoch} className={kind === 'chorus' ? 'stage-type-chorus' : LINE_CLASS} style={{ fontSize: fitPx }}>
               {spans.map((w, i) => (
                 <span
                   key={i}
@@ -135,6 +142,9 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
                     ['--word-delay' as string]: `${Math.round(w.startMs - now - LEAD_MS)}ms`,
                   }}>
                   {w.text}
+                  <span className="ink" aria-hidden>
+                    {w.text}
+                  </span>
                 </span>
               ))}
             </div>

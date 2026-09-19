@@ -131,58 +131,31 @@
   animation: toast-fade 1s ease-out forwards;
 }
 
-/* karaoke: each word is a text-clipped gradient; --fill is how much of it is sung.
-   the fill is a css animation timed from the word's own start and length, so nothing
-   runs in javascript per frame; play state pauses it, a seek re-keys the line. */
-@property --fill {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 0%;
-}
-
-@property --ink {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #ffffff;
-}
-
-/* the sung part is the stage ink; the accent stays on the ring and the touch trail */
-@keyframes word-fill {
+/* karaoke: each word is two copies of its text, the pending one under the ink one, and the ink is
+   revealed by a clip-path animation timed from the word's own start and length. clip-path animates
+   on the compositor: no paint per frame, no javascript per frame. play state pauses it. */
+@keyframes word-reveal {
   from {
-    --fill: 0%;
-    --ink: var(--text, #ffffff);
+    clip-path: inset(-0.15em 100% -0.15em 0);
   }
   to {
-    --fill: 100%;
-    --ink: var(--text, #ffffff);
-  }
-}
-
-@keyframes word-pop {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  18% {
-    transform: translateY(-2px) scale(1.045);
-  }
-  100% {
-    transform: translateY(0) scale(1);
+    clip-path: inset(-0.15em 0 -0.15em 0);
   }
 }
 
 .karaoke-word {
   /* inline-block so a cjk word never breaks mid-word; spacing comes from a margin, not a space */
+  position: relative;
   display: inline-block;
-  background-image: linear-gradient(90deg, var(--ink) var(--fill), var(--pending, rgba(255, 255, 255, 0.3)) var(--fill));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: none;
-  animation:
-    word-fill var(--word-ms) linear var(--word-delay) both,
-    word-pop var(--word-ms) cubic-bezier(0.2, 0.8, 0.2, 1) var(--word-delay) both;
+  color: var(--pending, rgba(255, 255, 255, 0.3));
+}
+
+.karaoke-word > .ink {
+  position: absolute;
+  inset: 0;
+  color: var(--text, #ffffff);
+  animation: word-reveal var(--word-ms) linear var(--word-delay) both;
   animation-play-state: var(--play, running);
-  will-change: transform;
 }
 
 @keyframes karaoke-in {
@@ -323,6 +296,11 @@
   --stage-tracking: -0.03em;
   --stage-leading: 0.98;
   --stage-transform: none;
+  --chorus-font: "Outfit";
+  --chorus-weight: 900;
+  --chorus-tracking: -0.04em;
+  --chorus-leading: 0.96;
+  --chorus-transform: none;
 }
 .stage-sharp {
   --stage-font: "Anton";
@@ -330,6 +308,11 @@
   --stage-tracking: 0.01em;
   --stage-leading: 1;
   --stage-transform: uppercase;
+  --chorus-font: "Syne";
+  --chorus-weight: 800;
+  --chorus-tracking: -0.02em;
+  --chorus-leading: 0.96;
+  --chorus-transform: uppercase;
 }
 .stage-grid {
   --stage-font: "Space Grotesk";
@@ -337,6 +320,11 @@
   --stage-tracking: -0.04em;
   --stage-leading: 0.96;
   --stage-transform: none;
+  --chorus-font: "Outfit";
+  --chorus-weight: 800;
+  --chorus-tracking: -0.02em;
+  --chorus-leading: 0.96;
+  --chorus-transform: uppercase;
 }
 .stage-calm {
   --stage-font: "DM Serif Display";
@@ -344,6 +332,11 @@
   --stage-tracking: -0.01em;
   --stage-leading: 1.04;
   --stage-transform: none;
+  --chorus-font: "Outfit";
+  --chorus-weight: 300;
+  --chorus-tracking: 0.06em;
+  --chorus-leading: 1.06;
+  --chorus-transform: uppercase;
 }
 
 /* resolved on the element, not in :root, so each stage's own voice applies */
@@ -353,6 +346,15 @@
   letter-spacing: var(--stage-tracking);
   line-height: var(--stage-leading);
   text-transform: var(--stage-transform);
+}
+
+/* the chorus speaks in the genre's second voice */
+.stage-type-chorus {
+  font-family: var(--chorus-font), "Outfit", system-ui, sans-serif;
+  font-weight: var(--chorus-weight);
+  letter-spacing: var(--chorus-tracking);
+  line-height: var(--chorus-leading);
+  text-transform: var(--chorus-transform);
 }
 
 /* five gradient layers take turns: each one is visible for its slot of the cycle */
@@ -407,17 +409,6 @@
   animation-name: shape-drift-reverse;
 }
 
-.shape-circle {
-  border-radius: 9999px;
-}
-
-.shape-square {
-  border-radius: 6px;
-}
-
-.shape-triangle {
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-}
 
 /* the whole shape layer breathes on the beat: one transform for all of them */
 @keyframes shapes-beat {

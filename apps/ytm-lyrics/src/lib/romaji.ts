@@ -274,7 +274,19 @@ export interface RomajiWord {
 }
 
 // the line as romaji words, each still knowing its kana so timing can count morae
+const wordsCache = new Map<string, RomajiWord[]>();
+const WORDS_CACHE_MAX = 400;
+
 export function romanizeWords(text: string, dict: JaDict): RomajiWord[] {
+  const hit = wordsCache.get(text);
+  if (hit) return hit;
+  const out = romanizeWordsUncached(text, dict);
+  if (wordsCache.size >= WORDS_CACHE_MAX) wordsCache.delete(wordsCache.keys().next().value as string);
+  wordsCache.set(text, out);
+  return out;
+}
+
+function romanizeWordsUncached(text: string, dict: JaDict): RomajiWord[] {
   const out: RomajiWord[] = [];
   for (const seg of groupSegments(segments(text))) {
     if (/^\s+$/.test(seg)) continue;
