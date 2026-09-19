@@ -1,5 +1,9 @@
 # ytm-lyrics
 
+## 1.0.0
+
+line changes no longer stall: upcoming lines are measured in idle time and the chorus flash drops its brightness filter. deezer facts grow: tempo measured on the device from the 30s preview when deezer has none, loudness and energy driving stage intensity, genre packs for the shapes, canonical title as a second lyrics search, release year on the intro card
+
 ## 0.9.3
 
 the track intro keys on title+artist and waits 500 ms of stable metadata, so a seek no longer replays it

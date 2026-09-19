@@ -1,9 +1,10 @@
 import type { BridgethingClient, ConnectionState, Lyrics, PlayerState } from '@bridgething/client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { analyze } from './lib/beat';
 import { lookupFacts, type TrackFacts } from './lib/deezer';
 import { lookup, trackKeyId, type TrackKey } from './lib/lrclib';
-import { tunneledHttp } from './lib/net';
+import { tunneledBytes, tunneledHttp } from './lib/net';
 import { normalizeArtist, normalizeTitle } from './lib/normalize';
 import { themeFromImage, type Theme } from './lib/palette';
 import { HAS_JAPANESE, parseDict, type JaDict } from './lib/romaji';
@@ -94,7 +95,7 @@ export interface LyricsView {
   lyrics: Lyrics | null;
 }
 
-export function useLyrics(client: BridgethingClient, state: PlayerState | null): LyricsView {
+export function useLyrics(client: BridgethingClient, state: PlayerState | null, facts: TrackFacts | null = null): LyricsView {
   const [view, setView] = useState<LyricsView>({ status: 'idle', lyrics: null });
   const cache = useRef(new Map<string, Lyrics | null>());
   const http = useRef(tunneledHttp(client));
@@ -104,21 +105,28 @@ export function useLyrics(client: BridgethingClient, state: PlayerState | null):
     ? { title: normalizeTitle(track.title), artist: normalizeArtist(track.artist), durationMs: track.durationMs }
     : null;
   const id = key ? trackKeyId(key) : null;
+  // deezer's spelling of the same song, tried when the player's spelling finds nothing
+  const canonical: TrackKey | null =
+    facts && key && (facts.title !== key.title || facts.artist !== key.artist)
+      ? { title: normalizeTitle(facts.title), artist: normalizeArtist(facts.artist), durationMs: key.durationMs }
+      : null;
+  const canonicalId = canonical ? trackKeyId(canonical) : null;
 
   useEffect(() => {
     if (!key || !id) {
       setView({ status: 'idle', lyrics: null });
       return;
     }
-    if (cache.current.has(id)) {
-      const hit = cache.current.get(id) ?? null;
-      setView({ status: hit ? 'found' : 'none', lyrics: hit });
+    const cached = cache.current.get(id);
+    if (cached) {
+      setView({ status: 'found', lyrics: cached });
       return;
     }
     let stale = false;
     setView({ status: 'loading', lyrics: null });
     lookup(http.current, key)
       .catch(() => null)
+      .then(found => (found?.synced || !canonical ? found : lookup(http.current, canonical).catch(() => found).then(alt => alt?.synced ? alt : (found ?? alt))))
       .then(found => {
         // a failed lookup is not cached so a busy lrclib gets retried on the next track change back
         if (found) cache.current.set(id, found);
@@ -127,9 +135,9 @@ export function useLyrics(client: BridgethingClient, state: PlayerState | null):
     return () => {
       stale = true;
     };
-    // the id folds every field of key
+    // the ids fold every field of the keys; the canonical one arrives later and re-runs this
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, canonicalId]);
 
   // warm the cache for whatever comes next so the track change lands with words already on screen
   const queue = state?.queue ?? null;
@@ -225,6 +233,20 @@ export function useJaDict(lyrics: Lyrics | null): JaDict | null {
 // bpm and loudness from deezer, looked up once per track and remembered on the device. the answer
 // arrives whenever it arrives; the visuals run on the cadence estimate until then. the next track in
 // the queue is looked up ahead of time so a track change lands with its tempo already known.
+// the preview is 30 seconds of mp3; decoding and analysing it takes well under a second and runs
+// off the frame. a weak beat (quiet intros, rubato) is discarded rather than trusted.
+const MIN_BEAT_CONFIDENCE = 0.3;
+const ANALYSIS_RATE = 22050;
+
+async function analysePreview(client: BridgethingClient, url: string): Promise<{ bpm: number | null; energy: number } | null> {
+  const bytes = await tunneledBytes(client, url);
+  if (!bytes) return null;
+  const ctx = new OfflineAudioContext(1, ANALYSIS_RATE * 31, ANALYSIS_RATE);
+  const buffer = await ctx.decodeAudioData(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
+  const r = analyze(buffer.getChannelData(0), buffer.sampleRate);
+  return { bpm: r.confidence >= MIN_BEAT_CONFIDENCE && r.bpm > 0 ? r.bpm : null, energy: r.energy };
+}
+
 export function useFacts(client: BridgethingClient, state: PlayerState | null): TrackFacts | null {
   const [facts, setFacts] = useState<TrackFacts | null>(null);
   const cache = useRef(new Map<string, TrackFacts | null>());
@@ -256,7 +278,19 @@ export function useFacts(client: BridgethingClient, state: PlayerState | null): 
           cache.current.set(kid, parsed);
           return parsed;
         }
-        return lookupFacts(http.current, k).then(found => {
+        return lookupFacts(http.current, k).then(async found => {
+          // no bpm from deezer but a preview: measure it ourselves; energy comes along either way
+          if (found?.previewUrl && (found.bpm === null || found.energy === null)) {
+            const measured = await analysePreview(client, found.previewUrl).catch(() => null);
+            if (measured) {
+              found = {
+                ...found,
+                bpm: found.bpm ?? measured.bpm,
+                bpmSource: found.bpm ? 'deezer' : measured.bpm ? 'preview' : null,
+                energy: measured.energy,
+              };
+            }
+          }
           cache.current.set(kid, found);
           if (found) client.store.put({ key: stored, value: JSON.stringify(found) });
           return found;

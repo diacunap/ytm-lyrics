@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { lookupFacts, pickHit } from './deezer';
+import { lookupFacts, pickHit, styleFor } from './deezer';
 import type { Http } from './lrclib';
 
 const hits = [
@@ -37,23 +37,49 @@ describe('pickHit', () => {
 
 describe('lookupFacts', () => {
   const key = { title: 'Around the World', artist: 'Daft Punk', durationMs: 429_000 };
-  test('search then track detail, rounding the bpm', async () => {
+  test('search, track detail and album genres, rounding the bpm', async () => {
     const h = http({
       '/search': { status: 200, body: { data: [{ id: 3129775, title: 'Around the World', duration: 429 }] } },
-      '/track/3129775': { status: 200, body: { bpm: 121.23, gain: -11.2 } },
+      '/track/3129775': {
+        status: 200,
+        body: { title: 'Around the World', bpm: 121.23, gain: -11.2, preview: 'https://p/x.mp3', release_date: '1997-01-17', artist: { name: 'Daft Punk' }, album: { id: 5, cover_xl: 'https://c/xl.jpg' } },
+      },
+      '/album/5': { status: 200, body: { genres: { data: [{ name: 'Electro' }, { name: 'Dance' }] } } },
     });
-    expect(await lookupFacts(h, key)).toEqual({ bpm: 121.2, gainDb: -11.2, source: 'deezer:3129775' });
+    const facts = await lookupFacts(h, key);
+    expect(facts).toMatchObject({ bpm: 121.2, bpmSource: 'deezer', gainDb: -11.2, energy: null, title: 'Around the World', artist: 'Daft Punk', year: 1997, genres: ['Electro', 'Dance'], style: 'grid', previewUrl: 'https://p/x.mp3', coverUrl: 'https://c/xl.jpg', source: 'deezer:3129775' });
     expect(new URL(h.calls[0]).searchParams.get('q')).toBe('Daft Punk Around the World');
   });
-  test('a zero bpm means deezer has not analysed it', async () => {
+  test('a zero bpm means deezer has not analysed it; the preview stays for us to analyse', async () => {
     const h = http({
       '/search': { status: 200, body: { data: [{ id: 9, title: 'Dramaturgy', duration: 238 }] } },
-      '/track/9': { status: 200, body: { bpm: 0, gain: -4.9 } },
+      '/track/9': { status: 200, body: { bpm: 0, gain: -4.9, preview: 'https://p/d.mp3', album: { id: 7 } } },
+      '/album/7': { status: 200, body: { genres: { data: [{ name: 'Rock' }] } } },
     });
-    expect(await lookupFacts(h, { title: 'Dramaturgy', artist: 'Eve', durationMs: 238_000 })).toEqual({ bpm: null, gainDb: -4.9, source: 'deezer:9' });
+    const facts = await lookupFacts(h, { title: 'Dramaturgy', artist: 'Eve', durationMs: 238_000 });
+    expect(facts).toMatchObject({ bpm: null, bpmSource: null, gainDb: -4.9, style: 'sharp', previewUrl: 'https://p/d.mp3', year: null });
+  });
+  test('a missing album still yields facts', async () => {
+    const h = http({
+      '/search': { status: 200, body: { data: [{ id: 9, title: 'X', duration: 238 }] } },
+      '/track/9': { status: 200, body: { bpm: 100 } },
+    });
+    expect((await lookupFacts(h, { title: 'X', artist: 'Y', durationMs: 238_000 }))?.style).toBe('round');
   });
   test('no hits or a failing api gives null', async () => {
     expect(await lookupFacts(http({ '/search': { status: 200, body: { data: [] } } }), key)).toBeNull();
     expect(await lookupFacts(http({ '/search': { status: 503, body: {} } }), key)).toBeNull();
+  });
+});
+
+describe('styleFor', () => {
+  test.each([
+    [['Metal'], 'sharp'],
+    [['J-Pop'], 'round'],
+    [['Electro', 'Pop'], 'grid'],
+    [['Jazz'], 'calm'],
+    [[], 'round'],
+  ])('%j → %s', (genres, style) => {
+    expect(styleFor(genres as string[])).toBe(style as ReturnType<typeof styleFor>);
   });
 });

@@ -7,12 +7,14 @@ export const TrackIntro = memo(function TrackIntro({
   artUrl,
   title,
   artist,
+  year,
   light,
   onDone,
 }: {
   artUrl: string | null;
   title: string | null;
   artist: string | null;
+  year: number | null;
   light: boolean;
   onDone: () => void;
 }) {
@@ -26,6 +28,7 @@ export const TrackIntro = memo(function TrackIntro({
         <div className="font-karaoke text-[34px] leading-[1.05] font-extrabold tracking-[-0.03em] text-balance line-clamp-4">{title ?? ''}</div>
         <div className="mt-3 font-karaoke text-[21px] font-semibold" style={{ color: 'var(--dim)' }}>
           {artist ?? ''}
+          {year ? <span style={{ color: 'var(--faint)' }}> · {year}</span> : null}
         </div>
       </div>
     </div>

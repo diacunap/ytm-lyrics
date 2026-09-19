@@ -44,7 +44,8 @@ export default function App() {
   const head = seekHead && seekHead.basedOn === snapshotHead ? seekHead.head : snapshotHead;
   const track = state?.track ?? null;
   const artUrl = useArtwork(client, track?.artworkId ?? null);
-  const { status, lyrics } = useLyrics(client, state);
+  const facts = useFacts(client, state);
+  const { status, lyrics } = useLyrics(client, state, facts);
   const [offset, setOffset] = useOffset(client);
   const playing = head?.playing ?? false;
   const lines = lyrics?.synced ?? null;
@@ -76,10 +77,16 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [songKey]);
   const dict = useJaDict(lyrics);
-  const facts = useFacts(client, state);
-  // a measured tempo from deezer wins; the lyric cadence is the fallback and the only option offline
+  // a measured tempo (deezer's, or ours from the preview) wins; the lyric cadence is the offline fallback
   const estimatedBpm = useMemo(() => (lines ? estimateBpm(msPerBeat(lines, beatsFor(dict))) : null), [lines, dict]);
   const bpm = facts?.bpm ?? estimatedBpm;
+  const style = facts?.style ?? 'round';
+  // loudness as a multiplier on the stage: the preview's energy first, deezer's gain as a proxy, else neutral
+  const energy = useMemo(() => {
+    if (facts?.energy !== null && facts?.energy !== undefined) return 0.7 + facts.energy * 0.7;
+    if (facts?.gainDb !== null && facts?.gainDb !== undefined) return Math.max(0.7, Math.min(1.4, 1.4 + (facts.gainDb + 4) * 0.07));
+    return 1;
+  }, [facts]);
 
   // the loop and the input handlers read the latest values without re-subscribing every render
   const latest = useRef({ head, snapshotHead, offset, lines, playing, volume, durationMs, karaoke });
@@ -225,7 +232,7 @@ export default function App() {
   );
 
   const instrumentalView = (
-    <Instrumental theme={theme} artUrl={artUrl} title={track?.title ?? null} artist={track?.artist ?? null} bpm={bpm} playing={playing} songKey={songKey} quality={quality} />
+    <Instrumental theme={theme} artUrl={artUrl} title={track?.title ?? null} artist={track?.artist ?? null} bpm={bpm} playing={playing} songKey={songKey} quality={quality} style={style} energy={energy} />
   );
 
   const classic = (
@@ -270,7 +277,7 @@ export default function App() {
     <>
       {lines ? (
         head ? (
-          <Karaoke lines={lines} current={lineIndex} head={head} offsetMs={offset} theme={theme} dict={dict} songKey={songKey} quality={quality} bpm={bpm} />
+          <Karaoke lines={lines} current={lineIndex} head={head} offsetMs={offset} theme={theme} dict={dict} songKey={songKey} quality={quality} bpm={bpm} style={style} energy={energy} />
         ) : null
       ) : instrumental ? (
         instrumentalView
@@ -296,6 +303,7 @@ export default function App() {
             <span className="mr-4 opacity-80">
               {facts?.bpm ? '♩ ' : '~'}
               {Math.round(bpm)}
+              {facts?.bpmSource === 'preview' ? '*' : ''}
             </span>
           ) : null}
           {clock(positionMs)}
@@ -310,7 +318,7 @@ export default function App() {
       {progressRing}
       {track === null && conn === 'open' ? null : karaoke ? superKaraoke : classic}
       {intro ? (
-        <TrackIntro key={intro} artUrl={artUrl} title={track?.title ?? null} artist={track?.artist ?? null} light={!!theme?.light} onDone={() => setIntro(null)} />
+        <TrackIntro key={intro} artUrl={artUrl} title={track?.title ?? null} artist={track?.artist ?? null} year={facts?.year ?? null} light={!!theme?.light} onDone={() => setIntro(null)} />
       ) : null}
       <TouchFx accent={ringColor} />
       {toast ? (

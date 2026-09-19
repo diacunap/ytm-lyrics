@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 
+import type { Style } from './lib/deezer';
 import { gradientCss, rgbCss, themeKey, type Theme } from './lib/palette';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   intensity?: number;
   // the shapes breathe at this period; null keeps them still
   beatMs?: number | null;
+  // the genre's look: which shapes, how many, how fast
+  style?: Style;
 }
 
 const FALLBACK: Theme = {
@@ -28,7 +31,6 @@ const FALLBACK: Theme = {
 
 // how long one full pass through the five gradient layers takes
 export const CYCLE_S = 60;
-const SHAPES = 7;
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -49,6 +51,14 @@ function rng(seed: number): () => number {
 
 type Kind = 'circle' | 'square' | 'triangle';
 
+// what each genre family puts on the stage
+const PACKS: Record<Style, { kinds: Kind[]; count: number; speed: number; sizeMin: number; sizeMax: number; alpha: number }> = {
+  round: { kinds: ['circle', 'square', 'triangle'], count: 7, speed: 1, sizeMin: 40, sizeMax: 160, alpha: 1 },
+  sharp: { kinds: ['triangle', 'square', 'triangle'], count: 8, speed: 0.6, sizeMin: 60, sizeMax: 200, alpha: 1.15 },
+  grid: { kinds: ['square'], count: 12, speed: 0.8, sizeMin: 28, sizeMax: 64, alpha: 1.2 },
+  calm: { kinds: ['circle'], count: 3, speed: 1.8, sizeMin: 120, sizeMax: 260, alpha: 0.6 },
+};
+
 interface Shape {
   kind: Kind;
   size: number;
@@ -60,12 +70,13 @@ interface Shape {
   reverse: boolean;
 }
 
-function layout(seed: string): Shape[] {
+function layout(seed: string, style: Style): Shape[] {
   const next = rng(hash(seed));
-  const kinds: Kind[] = ['circle', 'square', 'triangle'];
-  return Array.from({ length: SHAPES }, (_, i) => ({
+  const pack = PACKS[style];
+  const kinds = pack.kinds;
+  return Array.from({ length: pack.count }, (_, i) => ({
     kind: kinds[i % kinds.length],
-    size: 40 + Math.round(next() * 120),
+    size: pack.sizeMin + Math.round(next() * (pack.sizeMax - pack.sizeMin)),
     top: Math.round(next() * 88),
     color: 1 + Math.floor(next() * 4),
     durationS: 40 + Math.round(next() * 50),
@@ -78,17 +89,18 @@ function layout(seed: string): Shape[] {
 // the stage behind lyrics and the instrumental view: the cover's colors cycling through five
 // gradient layers, drifting slowly, with a few translucent shapes sliding across on the x axis.
 // everything here is opacity and transform, nothing runs in javascript per frame.
-export const Backdrop = memo(function Backdrop({ theme, playing, seed, quality = 'full', intensity = 1, beatMs = null }: Props) {
+export const Backdrop = memo(function Backdrop({ theme, playing, seed, quality = 'full', intensity = 1, beatMs = null, style = 'round' }: Props) {
   const t = theme ?? FALLBACK;
   const colors = t.colors;
-  const all = useMemo(() => layout(seed), [seed]);
+  const pack = PACKS[style];
+  const all = useMemo(() => layout(seed, style), [seed, style]);
   const shapes = quality === 'full' ? all : all.slice(0, 3);
   const layers = quality === 'full' ? colors : colors.slice(0, 1);
   const play = playing ? 'running' : 'paused';
   const layerS = CYCLE_S / colors.length;
-  // a chorus makes the shapes move faster and show more of their color
-  const speed = 1 / intensity;
-  const alpha = (t.light ? 0.22 : 0.16) * intensity;
+  // a chorus or a loud song makes the shapes move faster and show more of their color
+  const speed = pack.speed / intensity;
+  const alpha = (t.light ? 0.22 : 0.16) * intensity * pack.alpha;
   return (
     <div
       key={themeKey(t)}

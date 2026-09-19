@@ -2,6 +2,7 @@ import type { LyricLine } from '@bridgething/client';
 import { memo, useEffect, useMemo, useRef } from 'react';
 
 import { Backdrop } from './Backdrop';
+import type { Style } from './lib/deezer';
 import { FitMeasurer } from './lib/fit';
 import { accentCss, type Theme } from './lib/palette';
 import { HAS_JAPANESE, countMorae, romanizeLine, romanizeWords, type JaDict } from './lib/romaji';
@@ -21,6 +22,9 @@ interface Props {
   songKey: string;
   quality: 'full' | 'lite';
   bpm: number | null;
+  style: Style;
+  // 0.7 for a quiet song, up to 1.4 for a loud one; multiplies the chorus intensity
+  energy: number;
 }
 
 // the current line gets the whole stage: 800x480 minus the top strip and the next-line footer
@@ -32,7 +36,7 @@ const LEAD_MS = 150;
 // a gap this long before the next line gets the intermission dots instead of a stale line
 const INTERMISSION_MS = 6000;
 
-export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, theme, dict, songKey, quality, bpm }: Props) {
+export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, theme, dict, songKey, quality, bpm, style, energy }: Props) {
   // one tempo per song, from how fast the tight lines go by; words then get their share of the sung part
   const timing = useMemo<Timing>(() => {
     const beats = beatsFor(dict);
@@ -100,8 +104,9 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
         playing={head.playing}
         seed={songKey}
         quality={quality}
-        intensity={kind === 'chorus' ? 1.6 : 1}
+        intensity={(kind === 'chorus' ? 1.6 : 1) * energy}
         beatMs={bpm ? Math.round(60_000 / bpm) : null}
+        style={style}
       />
 
       <div

@@ -1,6 +1,7 @@
 import { memo } from 'react';
 
 import { Backdrop } from './Backdrop';
+import type { Style } from './lib/deezer';
 import type { Theme } from './lib/palette';
 import type { Quality } from './lib/quality';
 
@@ -14,17 +15,19 @@ interface Props {
   playing: boolean;
   songKey: string;
   quality: Quality;
+  style: Style;
+  energy: number;
 }
 
 // the device never hears the audio, so this is honest generative motion: the cover's colors and
 // shapes drifting behind the artwork, which floats and pulses at the guessed tempo
-export const Instrumental = memo(function Instrumental({ theme, artUrl, title, artist, bpm, playing, songKey, quality }: Props) {
+export const Instrumental = memo(function Instrumental({ theme, artUrl, title, artist, bpm, playing, songKey, quality, style, energy }: Props) {
   const beatMs = bpm ? Math.round(60_000 / bpm) : null;
   return (
     <div
       className={'stage absolute inset-0 overflow-hidden' + (theme?.light ? ' stage-light' : '')}
       style={{ ['--play' as string]: playing ? 'running' : 'paused', ['--beat' as string]: beatMs ? `${beatMs}ms` : '0ms' }}>
-      <Backdrop theme={theme} playing={playing} seed={songKey} quality={quality} beatMs={beatMs} />
+      <Backdrop theme={theme} playing={playing} seed={songKey} quality={quality} beatMs={beatMs} style={style} intensity={energy} />
       <div className="grain absolute inset-0" />
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
         <div className={'art-float size-56 overflow-hidden rounded-md shadow-2xl' + (beatMs ? ' art-pulse' : '')}>

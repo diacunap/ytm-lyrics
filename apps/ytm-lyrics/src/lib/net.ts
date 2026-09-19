@@ -25,3 +25,13 @@ export function tunneledHttp(client: BridgethingClient): Http {
     return { status: res.response.response.status, text: decoder.decode(body) };
   };
 }
+
+// raw bytes through the tunnel, for the audio preview
+export async function tunneledBytes(client: BridgethingClient, url: string): Promise<Uint8Array | null> {
+  const res = await client.net.fetch(
+    { request: { url, method: 'GET', headers: [], timeoutMs: 15_000, redirect: 'follow' } },
+    { timeoutMs: 20_000 },
+  );
+  if (!res.ok || res.response.response.status !== 200) return null;
+  return new Uint8Array(res.response.response.body as unknown as number[]);
+}
