@@ -1,5 +1,9 @@
 # ytm-lyrics
 
+## 1.2.1
+
+lyrics and facts are cached by title and artist, so a seek's momentary duration change no longer shows a lookup or resets the stage
+
 ## 1.2.0
 
 word fill moves to a composited clip-path reveal (no paint, no per-word layers), twenty-odd svg silhouettes in genre packs, a second voice per genre for the chorus, romanization cached

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { analyze } from './lib/beat';
 import { lookupFacts, type TrackFacts } from './lib/deezer';
-import { lookup, trackKeyId, type TrackKey } from './lib/lrclib';
+import { lookup, type TrackKey } from './lib/lrclib';
 import { tunneledBytes, tunneledHttp } from './lib/net';
 import { normalizeArtist, normalizeTitle } from './lib/normalize';
 import { themeFromImage, type Theme } from './lib/palette';
@@ -104,13 +104,15 @@ export function useLyrics(client: BridgethingClient, state: PlayerState | null, 
   const key: TrackKey | null = track
     ? { title: normalizeTitle(track.title), artist: normalizeArtist(track.artist), durationMs: track.durationMs }
     : null;
-  const id = key ? trackKeyId(key) : null;
+  // identity by name only: a seek can report a different duration for a moment, and that must not
+  // look like a new song (the duration still picks the right upload inside the lookup)
+  const id = key ? `${key.title}\u0000${key.artist}` : null;
   // deezer's spelling of the same song, tried when the player's spelling finds nothing
   const canonical: TrackKey | null =
     facts && key && (facts.title !== key.title || facts.artist !== key.artist)
       ? { title: normalizeTitle(facts.title), artist: normalizeArtist(facts.artist), durationMs: key.durationMs }
       : null;
-  const canonicalId = canonical ? trackKeyId(canonical) : null;
+  const canonicalId = canonical ? `${canonical.title}\u0000${canonical.artist}` : null;
 
   useEffect(() => {
     if (!key || !id) {
@@ -146,7 +148,7 @@ export function useLyrics(client: BridgethingClient, state: PlayerState | null, 
   const upcomingKey: TrackKey | null = upcoming
     ? { title: normalizeTitle(upcoming.title), artist: normalizeArtist(upcoming.artist), durationMs: upcoming.durationMs }
     : null;
-  const upcomingId = upcomingKey ? trackKeyId(upcomingKey) : null;
+  const upcomingId = upcomingKey ? `${upcomingKey.title}\u0000${upcomingKey.artist}` : null;
   const inflight = useRef(new Set<string>());
   useEffect(() => {
     if (!upcomingKey || !upcomingId || upcomingId === id) return;
@@ -256,12 +258,13 @@ export function useFacts(client: BridgethingClient, state: PlayerState | null): 
   const keyFor = (t: { title: string | null; artist: string | null; durationMs: number | null } | null | undefined): TrackKey | null =>
     t ? { title: normalizeTitle(t.title), artist: normalizeArtist(t.artist), durationMs: t.durationMs } : null;
 
+  const byName = (k: TrackKey | null) => (k ? `${k.title}\u0000${k.artist}` : null);
   const key = keyFor(state?.track);
-  const id = key ? trackKeyId(key) : null;
+  const id = byName(key);
   const queue = state?.queue ?? null;
   const queueIndex = state?.playback.queueIndex ?? null;
   const upcomingKey = keyFor(queue && queue.length > 0 ? queue[queueIndex === null ? 0 : queueIndex + 1] : null);
-  const upcomingId = upcomingKey ? trackKeyId(upcomingKey) : null;
+  const upcomingId = byName(upcomingKey);
 
   const fetchInto = (k: TrackKey, kid: string, onDone?: (f: TrackFacts | null) => void) => {
     if (cache.current.has(kid) || inflight.current.has(kid)) {

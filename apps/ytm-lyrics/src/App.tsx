@@ -469,7 +469,7 @@ function Fallback({ status, plain, hasTrack }: { status: string; plain: string |
       </div>
     );
   }
-  const label = !hasTrack ? '' : status === 'loading' ? 'looking up lyrics…' : status === 'none' ? 'no lyrics for this one' : '';
+  const label = !hasTrack ? '' : status === 'loading' ? '· · ·' : status === 'none' ? 'no lyrics for this one' : '';
   return (
     <div className="grid h-full place-items-center font-mono text-body tracking-[0.2em] text-dim uppercase">{label}</div>
   );
