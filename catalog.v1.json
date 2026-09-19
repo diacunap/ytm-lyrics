@@ -1,7 +1,7 @@
 {
   "$schema": "https://apps.bridgething.com/schemas/catalog/v1.json",
   "schema": "catalog.v1",
-  "updated_at": "2026-09-19T07:47:54.155Z",
+  "updated_at": "2026-09-19T07:49:26.538Z",
   "repo": {
     "name": "ytm-lyrics",
     "description": "Webapps by ytm-lyrics.",
@@ -18,6 +18,23 @@
       "homepage": "https://github.com/diacunap/ytm-lyrics",
       "source": "https://github.com/diacunap/ytm-lyrics",
       "versions": [
+        {
+          "version": "1.2.2",
+          "released_at": "2026-09-19T07:49:26.500Z",
+          "download": {
+            "url": "https://diacunap.github.io/ytm-lyrics/r/01a0b7ff-16b7-726e-9555-0719b9d96665/1.2.2.zip",
+            "size": 1459038,
+            "sha256": "8686c424a4724b63ab4386887526ee2fa2cfbbdf672efc7e985be9a98272818c"
+          },
+          "settings": {
+            "url": "https://diacunap.github.io/ytm-lyrics/s/01a0b7ff-16b7-726e-9555-0719b9d96665/1.2.2.html",
+            "size": 26923,
+            "sha256": "b44e7ee1b16e9aa4150bf231bd5c85d34982fe5ccb3dc6006c174cbbedd4e341"
+          },
+          "permissions": [],
+          "min_libbridgething_version": "0.12.1",
+          "changelog": "long latin words carry soft hyphens at syllable boundaries and break with a dash instead of leaving the stage"
+        },
         {
           "version": "1.2.1",
           "released_at": "2026-09-19T07:47:54.152Z",
