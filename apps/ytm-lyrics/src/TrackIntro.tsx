@@ -9,6 +9,7 @@ export const TrackIntro = memo(function TrackIntro({
   artist,
   year,
   light,
+  style,
   onDone,
 }: {
   artUrl: string | null;
@@ -16,16 +17,17 @@ export const TrackIntro = memo(function TrackIntro({
   artist: string | null;
   year: number | null;
   light: boolean;
+  style: string;
   onDone: () => void;
 }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+    <div className={`stage stage-${style} pointer-events-none absolute inset-0 z-20 overflow-hidden` + (light ? ' stage-light' : '')}>
       <div className={'intro-scrim absolute inset-0 ' + (light ? 'bg-off-white' : 'bg-screen')} />
       <div className="intro-art absolute top-0 left-0 h-full aspect-square overflow-hidden shadow-2xl" onAnimationEnd={onDone}>
         {artUrl ? <img src={artUrl} alt="" className="size-full object-cover" /> : <div className="size-full bg-current opacity-10" />}
       </div>
       <div className="intro-text absolute top-1/2 right-8 left-[508px] -translate-y-1/2">
-        <div className="font-karaoke text-[34px] leading-[1.05] font-extrabold tracking-[-0.03em] text-balance line-clamp-4">{title ?? ''}</div>
+        <div className="stage-type text-[34px] text-balance line-clamp-4">{title ?? ''}</div>
         <div className="mt-3 font-karaoke text-[21px] font-semibold" style={{ color: 'var(--dim)' }}>
           {artist ?? ''}
           {year ? <span style={{ color: 'var(--faint)' }}> · {year}</span> : null}

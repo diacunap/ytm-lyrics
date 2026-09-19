@@ -1,5 +1,9 @@
 # ytm-lyrics
 
+## 1.1.0
+
+a typeface per genre family (Anton, Space Grotesk, DM Serif Display, Syne), plain ink on the sung word, the position loop at 20 Hz with ring and clock at 5 Hz
+
 ## 1.0.0
 
 line changes no longer stall: upcoming lines are measured in idle time and the chorus flash drops its brightness filter. deezer facts grow: tempo measured on the device from the 30s preview when deezer has none, loudness and energy driving stage intensity, genre packs for the shapes, canonical title as a second lyrics search, release year on the intro card

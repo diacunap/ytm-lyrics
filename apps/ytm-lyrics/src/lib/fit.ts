@@ -26,6 +26,17 @@ export class FitMeasurer {
     private render: (text: string) => string,
   ) {}
 
+  private font = '';
+
+  // the probe lives outside the stage, so it is told which voice to measure with; a change clears the cache
+  setFont(font: string): void {
+    if (font === this.font) return;
+    this.font = font;
+    this.cache.clear();
+    this.queue = [];
+    if (this.probe) this.probe.style.cssText += font;
+  }
+
   get(text: string): number | undefined {
     return this.cache.get(text);
   }
@@ -62,7 +73,7 @@ export class FitMeasurer {
     if (this.probe) return this.probe;
     const el = document.createElement('div');
     el.className = this.className;
-    el.style.cssText = `position:absolute;left:-10000px;top:0;width:${this.stageW}px;visibility:hidden;pointer-events:none;contain:layout style;`;
+    el.style.cssText = `position:absolute;left:-10000px;top:0;width:${this.stageW}px;visibility:hidden;pointer-events:none;contain:layout style;${this.font}`;
     document.body.appendChild(el);
     this.probe = el;
     return el;

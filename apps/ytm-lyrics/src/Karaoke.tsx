@@ -30,7 +30,7 @@ interface Props {
 // the current line gets the whole stage: 800x480 minus the top strip and the next-line footer
 const STAGE_W = 800 - 2 * 40;
 const STAGE_H = 480 - 64 - 110;
-const LINE_CLASS = 'font-karaoke leading-[0.98] font-extrabold tracking-[-0.03em] text-balance';
+const LINE_CLASS = 'stage-type text-balance';
 // the eye wants a word to start filling a beat before the ear hears it
 const LEAD_MS = 150;
 // a gap this long before the next line gets the intermission dots instead of a stale line
@@ -65,6 +65,17 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
     );
   }
   useEffect(() => () => measurer.current?.dispose(), []);
+  // the probe is not inside the stage, so it gets the stage's voice by hand from the css variables
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const cs = getComputedStyle(el);
+    const v = (name: string) => cs.getPropertyValue(name).trim();
+    measurer.current?.setFont(
+      `font-family:${v('--stage-font')},"Outfit",system-ui,sans-serif;font-weight:${v('--stage-weight')};letter-spacing:${v('--stage-tracking')};line-height:${v('--stage-leading')};text-transform:${v('--stage-transform')};`,
+    );
+  }, [style]);
   // the two lines ahead get measured while nothing is happening, so their turn costs no layout
   useEffect(() => {
     const ahead = [lines[current + 1]?.text, lines[current + 2]?.text].filter((t): t is string => !!t);
@@ -98,7 +109,7 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
   const intermission = window && nextStart !== null && gap >= INTERMISSION_MS ? { from: window.endMs, to: nextStart } : null;
 
   return (
-    <div className={'stage absolute inset-0 overflow-hidden' + (theme?.light ? ' stage-light' : '')}>
+    <div ref={stageRef} className={`stage stage-${style} absolute inset-0 overflow-hidden` + (theme?.light ? ' stage-light' : '')}>
       <Backdrop
         theme={theme}
         playing={head.playing}
@@ -136,14 +147,14 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
       {romaji ? (
         <div
           key={`r${current}`}
-          className="karaoke-next absolute right-10 bottom-16 left-10 truncate font-display text-[26px] font-medium"
+          className="karaoke-next absolute right-10 bottom-16 left-10 truncate font-display text-[26px] font-medium normal-case"
           style={{ color: 'var(--dim)' }}>
           {romaji}
         </div>
       ) : null}
       <div
         key={`n${current}`}
-        className="karaoke-next absolute right-10 bottom-6 left-36 truncate text-right font-karaoke text-[22px] font-medium"
+        className="karaoke-next stage-type absolute right-10 bottom-6 left-36 truncate text-right text-[22px]"
         style={{ color: 'var(--faint)' }}>
         {nextRomaji ? `${nextRomaji}  ·  ${next}` : next}
       </div>

@@ -26,6 +26,9 @@ const TOAST_MS = 1000;
 const SEEK_SETTLE_MS = 250;
 // a new line shows a beat before its stamp; the eye reads ahead of the ear
 const LINE_LEAD_MS = 120;
+// how often the line index is checked, and how often the ring and clock repaint
+const TICK_MS = 50;
+const RING_TICK_MS = 200;
 // a new song must stay reported this long before the intro plays
 const INTRO_SETTLE_MS = 500;
 const OFFSET_STEP_MS = 100;
@@ -95,30 +98,36 @@ export default function App() {
   useEffect(() => client.audio.onVolumeChanged(msg => setVolume(msg.level)), [client]);
 
   useEffect(() => {
-    let frame = 0;
-    let lastShownTenth = -1;
+    // the fill itself is css on the compositor; this loop only moves the line index and, less often,
+    // the ring and clock. twenty ticks a second is plenty for both and keeps the main thread quiet.
+    let lastShown = -1;
     const sampler = createSampler();
-    const tick = (now: number) => {
+    let frame = 0;
+    const sample = (now: number) => {
       const changed = sampler.push(now);
       if (changed) {
         setQuality(changed);
         setToast({ text: changed === 'lite' ? 'Lite visuals' : 'Full visuals', at: performance.now() });
       }
-      const { head, offset, lines } = latest.current;
-      if (head) {
-        const pos = projectPosition(head, performance.now(), offset);
-        if (lines) setLineIndex(lineIndexAt(lines, pos + LINE_LEAD_MS));
-        // the ring and clock move ten times a second; karaoke word fill is css-driven and needs nothing here
-        const tenth = Math.floor(pos / 100);
-        if (tenth !== lastShownTenth) {
-          lastShownTenth = tenth;
-          setPositionMs(pos);
-        }
-      }
-      frame = requestAnimationFrame(tick);
+      frame = requestAnimationFrame(sample);
     };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(sample);
+    const tick = () => {
+      const { head, offset, lines } = latest.current;
+      if (!head) return;
+      const pos = projectPosition(head, performance.now(), offset);
+      if (lines) setLineIndex(lineIndexAt(lines, pos + LINE_LEAD_MS));
+      const slot = Math.floor(pos / RING_TICK_MS);
+      if (slot !== lastShown) {
+        lastShown = slot;
+        setPositionMs(pos);
+      }
+    };
+    const timer = setInterval(tick, TICK_MS);
+    return () => {
+      clearInterval(timer);
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => {
@@ -318,7 +327,7 @@ export default function App() {
       {progressRing}
       {track === null && conn === 'open' ? null : karaoke ? superKaraoke : classic}
       {intro ? (
-        <TrackIntro key={intro} artUrl={artUrl} title={track?.title ?? null} artist={track?.artist ?? null} year={facts?.year ?? null} light={!!theme?.light} onDone={() => setIntro(null)} />
+        <TrackIntro key={intro} artUrl={artUrl} title={track?.title ?? null} artist={track?.artist ?? null} year={facts?.year ?? null} light={!!theme?.light} style={style} onDone={() => setIntro(null)} />
       ) : null}
       <TouchFx accent={ringColor} />
       {toast ? (

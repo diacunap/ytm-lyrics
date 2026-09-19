@@ -24,8 +24,33 @@
   src: url("./fonts/Syne-Variable.ttf") format("truetype-variations");
 }
 
+@font-face {
+  font-family: "Anton";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("./fonts/Anton-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: block;
+  src: url("./fonts/SpaceGrotesk-Variable.ttf") format("truetype-variations");
+}
+
+@font-face {
+  font-family: "DM Serif Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("./fonts/DMSerifDisplay-Regular.ttf") format("truetype");
+}
+
 @theme {
   --font-karaoke: "Syne", "Outfit", system-ui, sans-serif;
+
   --color-off-white: #efefef;
   --color-bg: #0a0c0e;
   --color-screen: #060809;
@@ -121,14 +146,11 @@
   initial-value: #ffffff;
 }
 
-/* the ink is the accent while the word is being sung and settles to white once it is done */
+/* the sung part is the stage ink; the accent stays on the ring and the touch trail */
 @keyframes word-fill {
   from {
     --fill: 0%;
-    --ink: var(--accent, #ffffff);
-  }
-  99% {
-    --ink: var(--accent, #ffffff);
+    --ink: var(--text, #ffffff);
   }
   to {
     --fill: 100%;
@@ -291,6 +313,46 @@
   --dim: rgba(10, 12, 14, 0.7);
   --faint: rgba(10, 12, 14, 0.45);
   --pending: rgba(10, 12, 14, 0.25);
+}
+
+/* one voice per genre family; every one of these is legible at 40px on a car screen */
+.stage,
+.stage-round {
+  --stage-font: "Syne";
+  --stage-weight: 800;
+  --stage-tracking: -0.03em;
+  --stage-leading: 0.98;
+  --stage-transform: none;
+}
+.stage-sharp {
+  --stage-font: "Anton";
+  --stage-weight: 400;
+  --stage-tracking: 0.01em;
+  --stage-leading: 1;
+  --stage-transform: uppercase;
+}
+.stage-grid {
+  --stage-font: "Space Grotesk";
+  --stage-weight: 700;
+  --stage-tracking: -0.04em;
+  --stage-leading: 0.96;
+  --stage-transform: none;
+}
+.stage-calm {
+  --stage-font: "DM Serif Display";
+  --stage-weight: 400;
+  --stage-tracking: -0.01em;
+  --stage-leading: 1.04;
+  --stage-transform: none;
+}
+
+/* resolved on the element, not in :root, so each stage's own voice applies */
+.stage-type {
+  font-family: var(--stage-font), "Outfit", system-ui, sans-serif;
+  font-weight: var(--stage-weight);
+  letter-spacing: var(--stage-tracking);
+  line-height: var(--stage-leading);
+  text-transform: var(--stage-transform);
 }
 
 /* five gradient layers take turns: each one is visible for its slot of the cycle */
