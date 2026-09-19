@@ -144,9 +144,13 @@
 }
 
 .karaoke-word {
-  /* inline-block so a cjk word never breaks mid-word; spacing comes from a margin, not a space */
+  /* inline-block so a cjk word never breaks mid-word; spacing comes from a margin, not a space.
+     a long latin word carries soft hyphens and may break with a dash when it has to. */
   position: relative;
   display: inline-block;
+  max-width: 100%;
+  hyphens: manual;
+  hyphenate-character: "-";
   color: var(--pending, rgba(255, 255, 255, 0.3));
 }
 

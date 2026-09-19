@@ -1,5 +1,9 @@
 # ytm-lyrics
 
+## 1.2.2
+
+long latin words carry soft hyphens at syllable boundaries and break with a dash instead of leaving the stage
+
 ## 1.2.1
 
 lyrics and facts are cached by title and artist, so a seek's momentary duration change no longer shows a lookup or resets the stage

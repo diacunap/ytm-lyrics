@@ -9,7 +9,7 @@ import { HAS_JAPANESE, countMorae, romanizeLine, romanizeWords, type JaDict } fr
 import { projectPosition, type Playhead } from './lib/sync';
 import { lineKinds } from './lib/structure';
 import { beatsFor, msPerBeat } from './lib/tempo';
-import { lineWindow, splitWords, wordSpans, type Timing } from './lib/words';
+import { hyphenate, lineWindow, splitWords, wordSpans, type Timing } from './lib/words';
 
 interface Props {
   lines: LyricLine[];
@@ -60,7 +60,7 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
   if (!measurer.current) {
     measurer.current = new FitMeasurer(LINE_CLASS, STAGE_W, STAGE_H, t =>
       shown(t)
-        .map(w => `<span class="karaoke-word${w.trailingSpace ? ' mr-[0.28em]' : ''}">${w.text.replace(/</g, '&lt;')}</span>`)
+        .map(w => `<span class="karaoke-word${w.trailingSpace ? ' mr-[0.28em]' : ''}">${hyphenate(w.text).replace(/</g, '&lt;')}</span>`)
         .join(''),
     );
   }
@@ -141,9 +141,9 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
                     ['--word-ms' as string]: `${Math.max(1, w.endMs - w.startMs)}ms`,
                     ['--word-delay' as string]: `${Math.round(w.startMs - now - LEAD_MS)}ms`,
                   }}>
-                  {w.text}
+                  {hyphenate(w.text)}
                   <span className="ink" aria-hidden>
-                    {w.text}
+                    {hyphenate(w.text)}
                   </span>
                 </span>
               ))}

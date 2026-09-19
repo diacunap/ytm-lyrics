@@ -104,3 +104,30 @@ export function wordFill(word: WordSpan, posMs: number): number {
   if (posMs >= word.endMs) return 1;
   return (posMs - word.startMs) / (word.endMs - word.startMs);
 }
+
+const HYPHENATE_OVER = 12;
+const MIN_CHUNK = 5;
+const SOFT_HYPHEN = '\u00ad';
+
+// a long word gets soft hyphens at syllable-ish boundaries so the browser can break it with a dash
+// instead of pushing it off the stage. romaji breaks after a vowel (that is a mora); other latin
+// words break between a vowel and the consonant that follows it. cjk never needs this.
+export function hyphenate(word: string): string {
+  if ([...word].length <= HYPHENATE_OVER || !/^[\p{Script=Latin}'’]+$/u.test(word)) return word;
+  const chars = [...word];
+  const vowel = (c: string) => /[aeiouyáéíóúüāēīōū]/i.test(c);
+  let out = '';
+  let chunk = 0;
+  for (let i = 0; i < chars.length; i++) {
+    out += chars[i];
+    chunk += 1;
+    const next = chars[i + 1];
+    const remaining = chars.length - i - 1;
+    const boundary = next !== undefined && vowel(chars[i]) && !vowel(next);
+    if (boundary && chunk >= MIN_CHUNK && remaining >= MIN_CHUNK) {
+      out += SOFT_HYPHEN;
+      chunk = 0;
+    }
+  }
+  return out;
+}

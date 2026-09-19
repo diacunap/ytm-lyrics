@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { lineWindow, splitWords, wordFill, wordSpans } from './words';
+import { hyphenate, lineWindow, splitWords, wordFill, wordSpans } from './words';
 
 const lines = [
   { startMs: 1000, text: 'around the world' },
@@ -75,5 +75,26 @@ describe('wordFill', () => {
     [999, 1],
   ])('at %i → %f', (pos, fill) => {
     expect(wordFill(w, pos)).toBeCloseTo(fill);
+  });
+});
+
+describe('hyphenate', () => {
+  const SH = '\u00ad';
+  test('short words are untouched', () => {
+    expect(hyphenate('korogatteku')).toBe('korogatteku');
+    expect(hyphenate('world')).toBe('world');
+  });
+  test('long romaji breaks after vowels, never leaving a tiny tail', () => {
+    const h = hyphenate('mitsumeteitakattanda');
+    expect(h.split(SH).every(part => part.length >= 5)).toBe(true);
+    expect(h.replace(new RegExp(SH, 'g'), '')).toBe('mitsumeteitakattanda');
+    expect(h.split(SH).length).toBeGreaterThan(1);
+  });
+  test('long english compounds break too', () => {
+    expect(hyphenate('supercalifragilistic').split(SH).length).toBeGreaterThan(2);
+  });
+  test('cjk and mixed scripts are left alone', () => {
+    expect(hyphenate('感情的にはなれないよ今更臆病')).toBe('感情的にはなれないよ今更臆病');
+    expect(hyphenate('abc123def456ghi789')).toBe('abc123def456ghi789');
   });
 });
