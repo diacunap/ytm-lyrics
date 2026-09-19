@@ -1,5 +1,5 @@
 import type { LyricLine } from '@bridgething/client';
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Backdrop } from './Backdrop';
 import type { Style } from './lib/deezer';
@@ -50,6 +50,31 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
     return { beats, msPerBeat: msPerBeat(lines, beats), words };
   }, [lines, dict]);
   const spans = useMemo(() => wordSpans(lines, current, timing), [lines, current, timing]);
+
+  // only the word being sung carries an animated reveal; the rest are plain text with a class.
+  // one compositor layer at a time, and a line change mounts plain spans only.
+  const [active, setActive] = useState(-1);
+  const spansRef = useRef(spans);
+  spansRef.current = spans;
+  const headRef = useRef({ head, offsetMs });
+  headRef.current = { head, offsetMs };
+  useEffect(() => {
+    let last = -2;
+    const tick = () => {
+      const { head, offsetMs } = headRef.current;
+      const pos = projectPosition(head, performance.now(), offsetMs) + LEAD_MS;
+      const list = spansRef.current;
+      let idx = -1;
+      for (let i = 0; i < list.length; i++) if (list[i].startMs <= pos) idx = i;
+      if (idx !== last) {
+        last = idx;
+        setActive(idx);
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 50);
+    return () => clearInterval(timer);
+  }, []);
 
   // the display text of a line (romaji or as written), used both to render and to pre-measure
   const shown = useMemo(() => {
@@ -133,20 +158,29 @@ export const Karaoke = memo(function Karaoke({ lines, current, head, offsetMs, t
         <div key={current} className={entrance + ' w-full'}>
           {empty ? null : (
             <div key={epoch} className={kind === 'chorus' ? 'stage-type-chorus' : LINE_CLASS} style={{ fontSize: fitPx }}>
-              {spans.map((w, i) => (
-                <span
-                  key={i}
-                  className={'karaoke-word' + (w.trailingSpace ? ' mr-[0.28em]' : '')}
-                  style={{
-                    ['--word-ms' as string]: `${Math.max(1, w.endMs - w.startMs)}ms`,
-                    ['--word-delay' as string]: `${Math.round(w.startMs - now - LEAD_MS)}ms`,
-                  }}>
-                  {hyphenate(w.text)}
-                  <span className="ink" aria-hidden>
+              {spans.map((w, i) => {
+                const state = i < active ? ' sung' : i === active ? ' singing' : '';
+                return (
+                  <span
+                    key={i}
+                    className={'karaoke-word' + state + (w.trailingSpace ? ' mr-[0.28em]' : '')}
+                    style={
+                      i === active
+                        ? {
+                            ['--word-ms' as string]: `${Math.max(1, w.endMs - w.startMs)}ms`,
+                            ['--word-delay' as string]: `${Math.round(w.startMs - now - LEAD_MS)}ms`,
+                          }
+                        : undefined
+                    }>
                     {hyphenate(w.text)}
+                    {i === active ? (
+                      <span className="ink" aria-hidden>
+                        {hyphenate(w.text)}
+                      </span>
+                    ) : null}
                   </span>
-                </span>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

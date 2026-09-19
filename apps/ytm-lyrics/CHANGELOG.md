@@ -1,5 +1,9 @@
 # ytm-lyrics
 
+## 1.2.3
+
+one animated word at a time: sung words are a class, pending words plain text, only the word being sung carries the clip-path reveal; sub lines fade without transforms
+
 ## 1.2.2
 
 long latin words carry soft hyphens at syllable boundaries and break with a dash instead of leaving the stage
