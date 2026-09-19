@@ -1,0 +1,4 @@
+The ja-dict.bin.gz asset is derived from JMdict and KANJIDIC2, property of the
+Electronic Dictionary Research and Development Group (EDRDG), used under the
+Creative Commons Attribution-ShareAlike 4.0 licence.
+https://www.edrdg.org/edrdg/licence.html
